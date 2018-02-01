@@ -3,15 +3,7 @@ const board = new five.Board({
     port: "COM3"
 });
 
-const request = require("request");
-const configuracao = require("./config");
-const fs = require("fs");
-const path = require("path");
-const api = configuracao.api;
-var endpointCreateSensor = api + "/api/Sensor/";
-var newId;
-var id;
-var noId;
+const net = require("./net")
 
 board.on("ready", function () {
     console.log("Ready");
@@ -23,66 +15,28 @@ board.on("ready", function () {
     });
 
     //check de id do sensor já gravado
-    fs.readFile("./id.txt", 'utf8', (error, data) => {
+    net.obterId(function (error, id) {
         if (error) {
-            // em caso de erro, o sistema cria um id novo
             console.error(error);
-            request.post(endpointCreateSensor, {
-                json: true,
-                body: { valor: 0 }
-            }, function (error, res, body) {
+        }
+    })
+    {
+        ultrassom.on("data", function () {
+            console.log(this.cm);
+            const cm = Math.floor(this.cm);
+
+            const dados = {
+                valor: cm
+            };
+            const id = net.obterId.id;
+            net.atualizar(id, dados, function (error, sensor) {
                 if (error) {
                     console.error(error);
                     return;
                 }
-                console.log("Criando");
-                console.log(res && res.statusCode);
-                console.log(body);
-                newId = body.id;
-                console.log(newId);
-
-                fs.writeFile("./id.txt", newId,
-                    (err) => {
-
-                        if (err) {
-                            console.error("txt nao gravado");
-                            return;
-                        }
-                        console.log("txt gravado");
-                        id = newId;
-                    }
-                );
+                console.log(sensor);
             })
-
-            return;
-        }
-        id = data;
-        console.log("Id encontrado:");
-        console.log(id);
-     
-        ultrassom.on("data", function () {
-            var endpointUpdateSensor = endpointCreateSensor + id;
-            console.log("Atualizando");
-            console.log(endpointUpdateSensor);
-            console.log(this.cm);
-            const cm = Math.floor(this.cm);
-    
-            const dados = {
-                valor: cm
-            };
-    
-            request.put(endpointUpdateSensor, {
-                json: true,
-                body: dados
-            },
-                function (error, res, body) {
-                    if (error) {
-                        console.error(error);
-                        return;
-                    }
-                    console.log(res && res.statusCode);
-                    console.log(body);
-                })
         })
-    })
+
+    }
 });
